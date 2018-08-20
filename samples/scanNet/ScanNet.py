@@ -3,6 +3,7 @@ import os
 import numpy as np
 import cv2 
 import csv
+import zipfile
 
 from SensorData import SensorData
 
@@ -57,7 +58,7 @@ class ScanNet(object):
         for scene in sceneList:
             scene = scene.strip()
             sceneDir = os.path.join("scans", scene)
-            if not os.path.isdir(sceneDir):
+            if not os.path.isdir(sceneDir) or len(scene)==0:
                 continue
             self.scenes.append(scene)
             print("Uploading scene: %s"%scene)
@@ -66,6 +67,12 @@ class ScanNet(object):
             labelDir = os.path.join(sceneDir, "label-filt")
             rgbDir = os.path.join(sceneDir, 'rgb')
             depthDir = os.path.join(sceneDir, 'depth')
+            
+            import shutil
+            shutil.rmtree(instanceDir, ignore_errors=True)
+            shutil.rmtree(labelDir, ignore_errors=True)
+            #os.rmdir(instanceDir)
+            #os.rmdir(labelDir)
 
             # Extract images from .sem file
             if not os.path.exists(rgbDir) or len(os.listdir(rgbDir)) != len(os.listdir(depthDir)):
@@ -77,9 +84,30 @@ class ScanNet(object):
                 sens.export_depth_images(depthDir)
                 sens.export_color_images(rgbDir)
 
+            if not os.path.exists(labelDir):
+                print("unzipping labels from %s..."%scene)
+                os.mkdir(labelDir)
+                f = zipfile.ZipFile(os.path.join(sceneDir, "%s_2d-label-filt.zip"%scene),'r')
+                for file in f.namelist():
+                    f.extract(file, sceneDir)
+                print("done")
+
+            if not os.path.exists(instanceDir):
+                print("unzipping instances from %s..."%scene)
+                os.mkdir(instanceDir)
+                f = zipfile.ZipFile(os.path.join(sceneDir, "%s_2d-instance-filt.zip"%scene),'r')
+                for file in f.namelist():
+                    f.extract(file, sceneDir)
+                print("done")
+
+
+                
+
             self.startId.append(count)
             self.frameCount.append(os.listdir(rgbDir))
             count = count+len(os.listdir(rgbDir)) 
+
+
         os.chdir(curDir)
 
     def map_label_image(self, image):

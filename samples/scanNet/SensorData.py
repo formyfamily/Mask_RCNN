@@ -86,7 +86,7 @@ class SensorData:
   def export_depth_images(self, output_path):
     if not os.path.exists(output_path):
       os.makedirs(output_path)
-    print('exporting', len(self.frames), ' depth frames to', output_path)
+    print('exporting', len(self.frames)//self.extractPerFrame, ' depth frames to', output_path)
     for f in range(len(self.frames)):
       if f%self.extractPerFrame!=0:
         continue
