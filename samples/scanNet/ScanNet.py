@@ -27,7 +27,7 @@ def read_label_mapping(filename, label_from='raw_category', label_to='nyu40id'):
 
 
 class ScanNet(object): 
-    def __init__(self, dataDir, subset, classId=None):
+    def __init__(self, dataDir, subset, classId=None, extractPerFrame=1):
         '''Input:
             dataDir: root dir of ScanNet data
             subset: {train/val}
@@ -68,10 +68,10 @@ class ScanNet(object):
             depthDir = os.path.join(sceneDir, 'depth')
 
             # Extract images from .sem file
-            if not os.path.exists(rgbDir):# or len(os.listdir(rgbDir)) != len(os.listdir(depthDir)):
+            if not os.path.exists(rgbDir) or len(os.listdir(rgbDir)) != len(os.listdir(depthDir)):
                 print('Loading Sens file...');
                 print(os.path.join(sceneDir, "%s.sens"%scene))
-                sens = SensorData(os.path.join(sceneDir, "%s.sens"%scene))
+                sens = SensorData(os.path.join(sceneDir, "%s.sens"%scene), extractPerFrame)
                 print('Loaded!')
 
                 sens.export_depth_images(depthDir)

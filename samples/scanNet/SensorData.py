@@ -48,9 +48,10 @@ class RGBDFrame():
 
 class SensorData:
 
-  def __init__(self, filename):
+  def __init__(self, filename, extractPerFrame):
     self.version = 4
     self.load(filename)
+    self.extractPerFrame = extractPerFrame
 
 
   def load(self, filename):
@@ -73,10 +74,10 @@ class SensorData:
       self.depth_shift =  struct.unpack('f', f.read(4))[0]
       num_frames =  struct.unpack('Q', f.read(8))[0]
       self.frames = []
-      print(num_frames)
+      print("Total frames: ", num_frames)
       for i in range(num_frames):
-        if i%50==0:
-          print(i)
+        if i%100==0:
+          print("loading finished: ", i)
         frame = RGBDFrame()
         frame.load(f)
         self.frames.append(frame)
@@ -87,8 +88,10 @@ class SensorData:
       os.makedirs(output_path)
     print('exporting', len(self.frames), ' depth frames to', output_path)
     for f in range(len(self.frames)):
-      if f%50==0:
-        print(f)
+      if f%self.extractPerFrame!=0:
+        continue
+      if f%(self.extractPerFrame*100)==0:
+        print("exportint finished: ", f//self.extractPerFrame)
       depth_data = self.frames[f].decompress_depth(self.depth_compression_type)
       depth = np.fromstring(depth_data, dtype=np.uint16).reshape(self.depth_height, self.depth_width)
       cv2.imwrite(os.path.join(output_path, str(f) + '.png'), depth)
@@ -97,10 +100,12 @@ class SensorData:
   def export_color_images(self, output_path):
     if not os.path.exists(output_path):
       os.makedirs(output_path)
-    print('exporting', len(self.frames), 'color frames to', output_path)
+    print('exporting', len(self.frames)//self.extractPerFrame, 'color frames to', output_path)
     for f in range(len(self.frames)):
-      if f%50==0:
-        print(f)
+      if f%self.extractPerFrame!=0:
+        continue
+      if f%(self.extractPerFrame*100)==0:
+        print("exportint finished: ", f//self.extractPerFrame)
       color = self.frames[f].decompress_color(self.color_compression_type)
       color = color[:,:,[2,1,0]]
       cv2.imwrite(os.path.join(output_path, str(f) + '.png'), color)

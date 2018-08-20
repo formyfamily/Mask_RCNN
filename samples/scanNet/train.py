@@ -52,6 +52,7 @@ ROOT_DIR = os.path.abspath("../../")
 SCAN_NET_DIR = os.path.abspath("../../../ScanNet")
 SCAN_NET_RGB_WIDTH = 1296
 SCAN_NET_RGB_HEIGHT = 968
+EXTRACT_PER_FRAME = 14
 
 
 # Import Mask RCNN
@@ -95,18 +96,20 @@ class ScanNetConfig(Config):
 ############################################################
 
 class ScanNetDataset(utils.Dataset):
-    def load_scanNet(self, dataset_dir, subset, class_ids=None, return_scanNet=False):
+    def load_scanNet(self, dataset_dir, subset, class_ids=None, return_scanNet=False, extract_per_frame=1):
         """Load a subset of the ScanNet dataset.
         dataset_dir: The root directory of the ScanNet dataset.
         subset: What to load (train, val)
         year: What dataset year to load (2014, 2017) as a string, not an integer
         class_ids: If provided, only loads images that have the given classes.
         return_scanNet: If True, returns the ScanNet object.
+        extract_per_frame: Extract a frame in how many frames.
         """
 
         # Upload scanNet dataSet: Might take a lot of time
         self.scan_dir = os.path.join(dataset_dir, "scans")
-        self.scanNet = ScanNet(dataset_dir, subset, class_ids) ;
+        self.scanNet = ScanNet(dataset_dir, subset, class_ids, extractPerFrame=extract_per_frame) ;
+        self.extractPerFrame = extract_per_frame
 
 
         # TODO: validate class_id
@@ -140,11 +143,11 @@ class ScanNetDataset(utils.Dataset):
                 image_id = self.scanNet.startId[sceneId]+i
                 self.add_image(
                     "scanNet", image_id=image_id,
-                    path=os.path.join(self.scan_dir, self.scanNet.scenes[sceneId], "rgb", "%d.png"%i),
+                    path=os.path.join(self.scan_dir, self.scanNet.scenes[sceneId], "rgb", "%d.png"%(i*extract_per_frame)),
                     width=SCAN_NET_RGB_WIDTH,
                     height=SCAN_NET_RGB_HEIGHT,
                     scene=self.scanNet.scenes[sceneId],
-                    pic_id=i)
+                    pic_id=i*extract_per_frame)
 
         if return_scanNet:
             return self.scanNet
@@ -366,12 +369,12 @@ if __name__ == '__main__':
         # Training dataset. Use the training set and 35K from the
         # validation set, as as in the Mask RCNN paper.
         dataset_train = ScanNetDataset()
-        dataset_train.load_scanNet(args.dataset, "train")
+        dataset_train.load_scanNet(args.dataset, "train", extract_per_frame=EXTRACT_PER_FRAME)
         dataset_train.prepare()
 
         # Validation dataset
         dataset_val = ScanNetDataset()
-        dataset_val.load_scanNet(args.dataset, "val")
+        dataset_val.load_scanNet(args.dataset, "val", extract_per_frame=EXTRACT_PER_FRAME)
         dataset_val.prepare()
 
         # Image Augmentation
@@ -409,7 +412,7 @@ if __name__ == '__main__':
     elif args.command == "evaluate":
         # Validation dataset
         dataset_val = ScanNetDataset()
-        dataset_val.load_scanNet(args.dataset, "val")
+        dataset_val.load_scanNet(args.dataset, "val", extract_per_frame=EXTRACT_PER_FRAME)
         dataset_val.prepare()
         evaluate_coco(model, dataset_val, coco, "bbox", limit=int(args.limit))
     else:
